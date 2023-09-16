@@ -1,137 +1,120 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as dat from "lil-gui";
-import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
-import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
-import typefaceFont from "three/examples/fonts/helvetiker_regular.typeface.json";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-/**
- * Base
- */
-// Debug
-const gui = new dat.GUI();
+// Setting the scene
 
-// Canvas
-const canvas = document.querySelector("canvas.webgl");
+var scene = new THREE.Scene();
 
-// Scene
-const scene = new THREE.Scene();
+// Camera Object
 
-/**
- * Textures
- */
-const textureLoader = new THREE.TextureLoader();
-const matcapTexture = textureLoader.load("textures/matcaps/8.png");
-
-/**
- * Fonts
- */
-const fontLoader = new FontLoader();
-
-fontLoader.load("/fonts/helvetiker_regular.typeface.json", (font) => {
-  // Material
-  const material = new THREE.MeshMatcapMaterial({ matcap: matcapTexture });
-
-  // Text
-  const textGeometry = new TextGeometry("Dounut House", {
-    font: font,
-    size: 0.5,
-    height: 0.2,
-    curveSegments: 12,
-    bevelEnabled: true,
-    bevelThickness: 0.03,
-    bevelSize: 0.02,
-    bevelOffset: 0,
-    bevelSegments: 5,
-  });
-  textGeometry.center();
-
-  const text = new THREE.Mesh(textGeometry, material);
-  scene.add(text);
-
-  // Donuts
-  const donutGeometry = new THREE.TorusGeometry(0.3, 0.2, 32, 64);
-
-  for (let i = 0; i < 100; i++) {
-    const donut = new THREE.Mesh(donutGeometry, material);
-    donut.position.x = (Math.random() - 0.5) * 10;
-    donut.position.y = (Math.random() - 0.5) * 10;
-    donut.position.z = (Math.random() - 0.5) * 10;
-    donut.rotation.x = Math.random() * Math.PI;
-    donut.rotation.y = Math.random() * Math.PI;
-    const scale = Math.random();
-    donut.scale.set(scale, scale, scale);
-
-    scene.add(donut);
-  }
-});
-
-/**
- * Sizes
- */
-const sizes = {
-  width: window.innerWidth,
-  height: window.innerHeight,
-};
-
-window.addEventListener("resize", () => {
-  // Update sizes
-  sizes.width = window.innerWidth;
-  sizes.height = window.innerHeight;
-
-  // Update camera
-  camera.aspect = sizes.width / sizes.height;
-  camera.updateProjectionMatrix();
-
-  // Update renderer
-  renderer.setSize(sizes.width, sizes.height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
-
-/**
- * Camera
- */
-// Base camera
-const camera = new THREE.PerspectiveCamera(
-  75,
-  sizes.width / sizes.height,
+var camera = new THREE.PerspectiveCamera(
+  4,
+  window.innerWidth / window.innerHeight,
   0.1,
-  100
+  1000
 );
-camera.position.x = 1;
-camera.position.y = 1;
-camera.position.z = 2;
-scene.add(camera);
+camera.position.z = 75;
+camera.position.x = 50;
+camera.position.y = 50;
+camera.lookAt(scene.position);
+camera.updateMatrixWorld();
 
-// Controls
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
+// Render Object
 
-/**
- * Renderer
- */
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvas,
+var renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Making the cube
+
+const loader = new GLTFLoader();
+
+var geometry = new THREE.BoxGeometry(5, 5, 5);
+var material = new THREE.MeshDepthMaterial({
+  opacity: 0.1,
+  blending: THREE.NormalBlending,
+  depthTest: true,
 });
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-/**
- * Animate
- */
-const clock = new THREE.Clock();
+const textureLoader = new THREE.TextureLoader();
+const texture = textureLoader.load("/boxA.jpg");
 
-const tick = () => {
-  const elapsedTime = clock.getElapsedTime();
+texture.wrapS = THREE.RepeatWrapping;
+texture.wrapT = THREE.RepeatWrapping;
+texture.repeat.set(1, 1);
 
-  // Update controls
-  controls.update();
+var cube = new THREE.Mesh(
+  geometry,
+  new THREE.MeshBasicMaterial({ map: texture })
+);
 
-  // Render
-  renderer.render(scene, camera);
+scene.add(cube);
 
-  // Call tick again on the next frame
-  window.requestAnimationFrame(tick);
+// Options to be added to the GUI
+
+var options = {
+  velx: 0,
+  vely: 0,
+  camera: {
+    speed: 0.0001,
+  },
+  stop: function () {
+    this.velx = 0;
+    this.vely = 0;
+  },
+  reset: function () {
+    this.velx = 0.1;
+    this.vely = 0.1;
+    camera.position.z = 75;
+    camera.position.x = 0;
+    camera.position.y = 0;
+    cube.scale.x = 1;
+    cube.scale.y = 1;
+    cube.scale.z = 1;
+    cube.material.wireframe = true;
+  },
 };
 
-tick();
+// DAT.GUI Related Stuff
+
+var gui = new dat.GUI();
+
+// var cam = gui.addFolder("Camera");
+// cam.add(options.camera, "speed", 0, 0.001).listen();
+// cam.add(camera.position, "y", 0, 100).listen();
+// cam.open();
+
+// var velocity = gui.addFolder("Velocity");
+// velocity.add(options, "velx", -0.2, 0.2).name("X").listen();
+// velocity.add(options, "vely", -0.2, 0.2).name("Y").listen();
+// velocity.open();
+
+var box = gui.addFolder("Cube");
+box.add(cube.scale, "x", 0, 3).name("Width").listen();
+box.add(cube.scale, "y", 0, 3).name("Height").listen();
+box.add(cube.scale, "z", 0, 3).name("Length").listen();
+// box.add(cube.material, "wireframe").listen();
+box.open();
+
+// gui.add(options, "stop");
+// gui.add(options, "reset");
+
+// Rendering the animation
+
+var render = function () {
+  requestAnimationFrame(render);
+
+  var timer = Date.now() * options.camera.speed;
+  camera.position.x = Math.cos(timer) * 100;
+  camera.position.z = Math.sin(timer) * 100;
+  camera.lookAt(scene.position);
+  camera.updateMatrixWorld();
+
+  cube.rotation.x += options.velx;
+  cube.rotation.y += options.vely;
+
+  renderer.render(scene, camera);
+};
+render();
